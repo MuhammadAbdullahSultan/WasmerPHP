@@ -1,0 +1,6 @@
+kind: wasmer.io/App.v0
+name: WasmerPHP
+owner: guydoom
+package: .
+scaling:
+  mode: single_concurrency
