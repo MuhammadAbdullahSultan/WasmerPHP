@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Data Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2563eb;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls h2 {
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status.loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #2563eb;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #16a34a;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
+        }
+
+        .summary {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .summary h2 {
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .summary-item .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+
+        .summary-item .label {
+            color: #64748b;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 25px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-header h2 {
+            color: #1f2937;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .task-subject {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .comment-cell {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .time-value {
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .total-row {
+            background: #f0f9ff;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 3px solid #2563eb;
+            font-size: 1.1rem;
+        }
+
+        .total-time {
+            color: #2563eb;
+            font-size: 1.3rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕒 Timeline Data Extractor</h1>
+            <p>Extract time tracking data from Taiga timeline API</p>
+        </div>
+
+        <div class="controls">
+            <h2>API Configuration</h2>
+            <div class="form-group">
+                <label for="baseUrl">Base URL:</label>
+                <input type="text" id="baseUrl" value="https://taiga.noorix.com" placeholder="https://taiga.noorix.com">
+            </div>
+            <div class="form-group">
+                <label for="authToken">Bearer Token:</label>
+                <input type="password" id="authToken" placeholder="Enter your bearer token...">
+            </div>
+            <div class="form-group">
+                <label for="userId">User ID:</label>
+                <input type="number" id="userId" value="20" placeholder="20">
+            </div>
+            <button class="btn" onclick="startDataExtraction()">🚀 Start Extraction (with Progress)</button>
+            <button class="btn btn-secondary" onclick="startDataExtractionSimple()">📊 Simple Extraction</button>
+            <button class="btn btn-secondary" onclick="stopDataExtraction()">⏹️ Stop</button>
+            <button class="btn btn-secondary" onclick="clearData()">🗑️ Clear Data</button>
+        </div>
+
+        <div id="statusContainer" class="hidden">
+            <div id="status" class="status"></div>
+            <div id="progressBarContainer" class="hidden" style="margin-top: 15px;">
+                <div style="background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden;">
+                    <div id="progressBar" style="background: #2563eb; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                </div>
+                <div id="progressText" style="text-align: center; margin-top: 5px; font-size: 12px; color: #666;"></div>
+            </div>
+        </div>
+
+        <div id="summaryContainer" class="summary hidden">
+            <h2>📊 Extraction Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="value" id="totalItems">0</div>
+                    <div class="label">Total Items</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="totalTime">0.00</div>
+                    <div class="label">Total Time</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="pagesProcessed">0</div>
+                    <div class="label">Pages Processed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="extractionDate">-</div>
+                    <div class="label">Extracted On</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tableContainer" class="table-container hidden">
+            <div class="table-header">
+                <h2>📋 Extracted Time Data</h2>
+            </div>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Reference</th>
+                        <th>Subject</th>
+                        <th>Comment</th>
+                        <th>Time</th>
+                        <th>Project</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="timeline-extractor.js"></script>
+    <script>
+        // Global variables
+        let currentData = null;
+
+        // UI Helper functions
+        function showStatus(message, type = 'loading') {
+            const statusContainer = document.getElementById('statusContainer');
+            const status = document.getElementById('status');
+            
+            // Check if message contains HTML
+            if (message.includes('<')) {
+                status.innerHTML = message;
+            } else {
+                status.textContent = message;
+            }
+            status.className = `status ${type}`;
+            statusContainer.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            document.getElementById('statusContainer').classList.add('hidden');
+        }
+
+        function updateSummary(summary) {
+            document.getElementById('totalItems').textContent = summary.totalItems;
+            document.getElementById('totalTime').textContent = summary.totalTimeFormatted;
+            document.getElementById('pagesProcessed').textContent = summary.pagesProcessed;
+            document.getElementById('extractionDate').textContent = summary.extractionDate;
+            document.getElementById('summaryContainer').classList.remove('hidden');
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function populateTable(items, totalTime) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            // Add data rows
+            items.forEach(item => {
+                // Determine item type and create appropriate link
+                const itemType = item.itemType || 'task'; // Default to task for backward compatibility
+                const itemRef = item.itemRef || item.taskRef; // Use new field or fall back to legacy
+                const itemId = item.itemId || item.taskId;
+                const itemSubject = item.itemSubject || item.taskSubject;
+                
+                // Create the URL based on item type
+                const baseUrl = 'https://taiga.noorix.com/project/anyspaces-20';
+                const itemUrl = `${baseUrl}/${itemType}/${itemRef}`;
+                
+                // Format type with appropriate icon and styling
+                const typeDisplay = itemType === 'issue' 
+                    ? '<span style="color: #dc2626; font-weight: bold;">🐛 Issue</span>'
+                    : '<span style="color: #059669; font-weight: bold;">📋 Task</span>';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${itemId}</td>
+                    <td>${typeDisplay}</td>
+                    <td><a href="${itemUrl}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 500;">#${itemRef}</a></td>
+                    <td class="task-subject" title="${itemSubject}">${itemSubject}</td>
+                    <td class="comment-cell" title="${item.comment}">${item.comment}</td>
+                    <td class="time-value">${item.timeValue.toFixed(2)}</td>
+                    <td>${item.projectName}</td>
+                    <td>${formatDate(item.created)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Add total row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'total-row';
+            totalRow.innerHTML = `
+                <td colspan="5"><strong>TOTAL</strong></td>
+                <td class="total-time"><strong>${totalTime.toFixed(2)}</strong></td>
+                <td colspan="2"></td>
+            `;
+            tableBody.appendChild(totalRow);
+
+            document.getElementById('tableContainer').classList.remove('hidden');
+        }
+
+        // Progress tracking variables
+        let progressLog = [];
+        let totalTasksFound = 0;
+        let currentTaskProgress = 0;
+
+        // Progress bar functions
+        function showProgressBar() {
+            document.getElementById('progressBarContainer').classList.remove('hidden');
+        }
+
+        function hideProgressBar() {
+            document.getElementById('progressBarContainer').classList.add('hidden');
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressText').textContent = '';
+        }
+
+        function updateProgressBar(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        // Update progress display
+        function updateProgressDisplay(event, data) {
+            const now = new Date().toLocaleTimeString();
+            const logEntry = `[${now}] ${data.message}`;
+            progressLog.push(logEntry);
+
+            // Keep only last 50 entries
+            if (progressLog.length > 50) {
+                progressLog = progressLog.slice(-50);
+            }
+
+            // Handle different event types
+            switch (event) {
+                case 'start':
+                    showProgressBar();
+                    updateProgressBar(5, 'Initializing...');
+                    showStatus('🚀 ' + data.message, 'loading');
+                    break;
+
+                case 'progress':
+                    const stepProgress = ((data.step - 1) / data.total_steps) * 100;
+                    updateProgressBar(stepProgress, `Step ${data.step}/${data.total_steps}`);
+                    showStatus(`📊 ${data.message}`, 'loading');
+                    break;
+
+                case 'timeline_page':
+                    showStatus(`📄 ${data.message}`, 'loading');
+                    break;
+
+                case 'task_comments':
+                    if (data.progress_percent) {
+                        const baseProgress = 33; // After step 1
+                        const taskProgress = (data.progress_percent / 100) * 50; // 50% for task processing
+                        updateProgressBar(baseProgress + taskProgress, `${data.current}/${data.total} tasks (${data.progress_percent}%)`);
+                        showStatus(`🔍 ${data.message}`, 'loading');
+                    }
+                    break;
+
+                case 'time_found':
+                    const itemTypeLabel = data.item_type || 'task';
+                    const itemRef = data.item_ref || data.task_ref || data.item_id;
+                    console.log(`⏰ Found ${data.time_value} hours in ${itemTypeLabel} #${itemRef}`);
+                    showStatus(`⏰ Found ${data.time_value} hours in ${itemTypeLabel} #${itemRef}`, 'loading');
+                    break;
+
+                case 'raw_api_response':
+                    // Don't update status for raw API response, just let it log to console
+                    const apiItemType = data.item_type || 'item';
+                    const apiItemId = data.item_id || data.task_id;
+                    console.log(`📄 Raw API Response for ${apiItemType} #${apiItemId} (${data.response_count} items)`);
+                    break;
+
+                case 'complete':
+                    updateProgressBar(95, 'Finalizing results...');
+                    showStatus(`✅ ${data.message}`, 'loading');
+                    break;
+
+                case 'result':
+                    updateProgressBar(100, 'Complete!');
+                    setTimeout(hideProgressBar, 2000);
+                    break;
+
+                case 'error':
+                    hideProgressBar();
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                    break;
+
+                default:
+                    showStatus(data.message, 'loading');
+            }
+
+            // Log progress to console for debugging
+            console.log(`[${event}]`, data);
+        }
+
+        // Main extraction function with progress
+        async function startDataExtraction() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const authToken = document.getElementById('authToken').value.trim();
+            const userId = parseInt(document.getElementById('userId').value);
+
+            // Validation
+            if (!baseUrl || !authToken || !userId) {
+                showStatus('Please fill in all required fields.', 'error');
+                setTimeout(hideStatus, 3000);
+                return;
+            }
+
+            // Check if extraction is already in progress
+            if (isExtractionInProgress()) {
+                showStatus('Extraction already in progress...', 'loading');
+                return;
+            }
+
+            try {
+                // Reset progress tracking
+                progressLog = [];
+                totalTasksFound = 0;
+                currentTaskProgress = 0;
+
+                showStatus('🚀 Starting data extraction with real-time progress...', 'loading');
+
+                // Call PHP backend with streaming progress
+                const result = await extractTimelineDataWithProgress(baseUrl, authToken, userId, updateProgressDisplay);
+                currentData = result;
+
+                // Update UI with final results
+                updateSummary(result.summary);
+                populateTable(result.items, result.summary.totalTime);
+
+                showStatus(`✅ Extraction completed! Found ${result.summary.totalItems} items with total time: ${result.summary.totalTimeFormatted}`, 'success');
+                
+                setTimeout(hideStatus, 5000);
+
+            } catch (error) {
+                console.error('Extraction error:', error);
+                showStatus(`❌ Extraction failed: ${error.message}`, 'error');
+                setTimeout(hideStatus, 5000);
+            }
+        }
+
+        // Fallback extraction without progress (original method)
+        async function startDataExtractionSimple() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const authToken = document.getElementById('authToken').value.trim();
+            const userId = parseInt(document.getElementById('userId').value);
+
+            // Validation
+            if (!baseUrl || !authToken || !userId) {
+                showStatus('Please fill in all required fields.', 'error');
+                setTimeout(hideStatus, 3000);
+                return;
+            }
+
+            // Check if extraction is already in progress
+            if (isExtractionInProgress()) {
+                showStatus('Extraction already in progress...', 'loading');
+                return;
+            }
+
+            try {
+                showStatus('Starting data extraction via PHP backend... This may take a while.', 'loading');
+
+                // Call PHP backend to extract data (original method)
+                const result = await extractTimelineData(baseUrl, authToken, userId);
+                currentData = result;
+
+                // Update UI
+                updateSummary(result.summary);
+                populateTable(result.items, result.summary.totalTime);
+
+                showStatus(`✅ Extraction completed! Found ${result.summary.totalItems} items with total time: ${result.summary.totalTimeFormatted}`, 'success');
+                
+                setTimeout(hideStatus, 5000);
+
+            } catch (error) {
+                console.error('Extraction error:', error);
+                showStatus(`❌ Extraction failed: ${error.message}`, 'error');
+                setTimeout(hideStatus, 5000);
+            }
+        }
+
+        // Stop extraction function
+        function stopDataExtraction() {
+            stopExtraction();
+            showStatus('⏹️ Extraction stopped by user', 'error');
+            setTimeout(hideStatus, 3000);
+        }
+
+        // Clear all data
+        function clearData() {
+            currentData = null;
+            clearExtractedData(); // Clear data from the extractor
+            document.getElementById('summaryContainer').classList.add('hidden');
+            document.getElementById('tableContainer').classList.add('hidden');
+            hideStatus();
+        }
+
+        // Initialize UI
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add enter key support for form inputs
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        startDataExtraction();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
